@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # weather_app_flutter_poc
 
 A new Flutter project.
@@ -7,15 +6,11 @@ A new Flutter project.
 
 This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
+<!--A few resources to get you started if this is your first Flutter project:
 
 - [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
 - [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-=======
-# Weather-App-Flutter-POC
-A Flutter-based proof of concept (POC) app that fetches and displays current weather data for a searched city.
->>>>>>> 74d4801be096b0ac7be79607758d7d224d804194
+samples, guidance on mobile development, and a full API reference.--!>
