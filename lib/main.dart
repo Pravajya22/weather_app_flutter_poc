@@ -1,6 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+void main() async {
+  await dotenv.load(fileName: ".env");
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Weather App',
+      home: Scaffold(
+        appBar: AppBar(title: Text('Weather App')),
+        body: Center(child: Text('Hello World')),
+      ),
+    );
+  }
+}
+
+
+/*void main() {
   runApp(const MyApp());
 }
 
@@ -119,4 +139,4 @@ class _MyHomePageState extends State<MyHomePage> {
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
-}
+}*/
