@@ -12,12 +12,12 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _searchedCity;
 
   void _onSearch() {
-    final city = _cityController.text.trim();
+    String city = _cityController.text.trim();
 
     if (city.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter a city name')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a city name')),
+      );
       return;
     }
 
@@ -25,25 +25,25 @@ class _HomeScreenState extends State<HomeScreen> {
       _searchedCity = city;
     });
 
-    // We'll call API later from here
-    print('Searching for: $city');
+    print("Fetching weather for: $city");
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Weather App'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Weather App'),
+        centerTitle: true,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Enter City Name', style: TextStyle(fontSize: 18)),
-            const SizedBox(height: 12),
             TextField(
               controller: _cityController,
               decoration: const InputDecoration(
-                hintText: 'e.g. Delhi, Mumbai, Tokyo',
+                labelText: 'Enter City Name',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -52,15 +52,16 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: _onSearch,
               child: const Text('Get Weather'),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 24),
             if (_searchedCity != null)
               Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Weather Info (Mock Display)',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    'Weather Info (Mock)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Text('City: $_searchedCity'),
                   const Text('Temperature: 25°C'),
                   const Text('Condition: Clear ☀️'),
