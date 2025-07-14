@@ -1,74 +1,56 @@
 import 'package:flutter/material.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatelessWidget {
+  final String weatherCondition; // e.g., 'Clear', 'Rain', etc.
+  final String city;
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+  const HomeScreen({
+    Key? key,
+    required this.weatherCondition,
+    this.city = 'Ahmedabad', // default value
+  }) : super(key: key);
 
-class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _cityController = TextEditingController();
-  String? _searchedCity;
-
-  void _onSearch() {
-    String city = _cityController.text.trim();
-
-    if (city.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a city name')),
-      );
-      return;
+  String _getBackgroundImage(String condition) {
+    switch (condition.toLowerCase()) {
+      case 'clear':
+        return 'assets/images/sunny.jpg';
+      case 'rain':
+        return 'assets/images/rainy.jpg';
+      case 'clouds':
+        return 'assets/images/cloudy.jpg';
+      case 'snow':
+        return 'assets/images/snowy.jpg';
+      default:
+        return 'assets/images/default.jpg';
     }
-
-    setState(() {
-      _searchedCity = city;
-    });
-
-    print("Fetching weather for: $city");
   }
 
   @override
   Widget build(BuildContext context) {
+    final String backgroundImage = _getBackgroundImage(weatherCondition);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Weather App'),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _cityController,
-              decoration: const InputDecoration(
-                labelText: 'Enter City Name',
-                border: OutlineInputBorder(),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            backgroundImage,
+            fit: BoxFit.cover,
+          ),
+          Container(
+            color: Colors.black.withOpacity(0.3),
+          ),
+          Center(
+            child: Text(
+              city,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _onSearch,
-              child: const Text('Get Weather'),
-            ),
-            const SizedBox(height: 24),
-            if (_searchedCity != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Weather Info (Mock)',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('City: $_searchedCity'),
-                  const Text('Temperature: 25°C'),
-                  const Text('Condition: Clear ☀️'),
-                ],
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
