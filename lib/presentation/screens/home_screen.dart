@@ -33,13 +33,8 @@ class HomeScreen extends StatelessWidget {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            backgroundImage,
-            fit: BoxFit.cover,
-          ),
-          Container(
-            color: Colors.black.withOpacity(0.3),
-          ),
+          Image.asset(backgroundImage, fit: BoxFit.cover),
+          Container(color: Colors.black.withOpacity(0.3)),
           Center(
             child: Text(
               city,
