@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 import 'presentation/screens/home_screen.dart'; // Import your custom screen
 
 void main() {
-  runApp(const MyApp());
+  runApp(const WeatherApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class WeatherApp extends StatelessWidget {
+  const WeatherApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Weather App',
       debugShowCheckedModeBanner: false,
-      home: HomeScreen(
-        city: 'Ahmedabad',
-        weatherCondition: 'Clear', // Make sure this is passed
+      home: const HomeScreen(),
+      theme: ThemeData(
+        fontFamily: 'Roboto',
+        brightness: Brightness.light,
       ),
     );
   }
