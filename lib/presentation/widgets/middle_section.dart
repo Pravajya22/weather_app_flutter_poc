@@ -3,96 +3,104 @@ import 'package:flutter/material.dart';
 class MiddleSection extends StatelessWidget {
   final String city;
   final String temperature;
-  final String condition;
   final String humidity;
   final String windSpeed;
+  final String weatherDescription;
+  final String weatherIcon;
+  final String day;
+  final String date;
 
   const MiddleSection({
     super.key,
     required this.city,
     required this.temperature,
-    required this.condition,
     required this.humidity,
     required this.windSpeed,
+    required this.weatherDescription,
+    required this.weatherIcon,
+    required this.day,
+    required this.date,
   });
-
-  IconData _getWeatherIcon(String condition) {
-    switch (condition.toLowerCase()) {
-      case 'cloudy':
-        return Icons.cloud;
-      case 'sunny':
-        return Icons.wb_sunny;
-      case 'rain':
-        return Icons.beach_access;
-      case 'snow':
-        return Icons.ac_unit;
-      default:
-        return Icons.wb_cloudy;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final icon = _getWeatherIcon(condition);
-
-    return Column(
-      children: [
-        Text(
-          city,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          temperature,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 64,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 0),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white70, size: 28),
-            const SizedBox(width: 8),
-            Text(
-              condition,
-              style: const TextStyle(color: Colors.white70, fontSize: 22),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          Text(
+            city,
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
-          ],
-        ),
-        const SizedBox(height: 15),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _infoTile('Humidity', humidity),
-            _infoTile('Wind', windSpeed),
-          ],
-        ),
-      ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$day, $date',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            weatherIcon,
+            style: const TextStyle(fontSize: 54),
+          ),
+          Text(
+            weatherDescription,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            temperature,
+            style: const TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildInfoTile('Humidity', humidity),
+              _buildInfoTile('Wind', windSpeed),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _infoTile(String label, String value) {
+  Widget _buildInfoTile(String title, String value) {
     return Column(
       children: [
         Text(
-          value,
+          title,
           style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Colors.white70,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 16),
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
