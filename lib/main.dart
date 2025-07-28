@@ -6,7 +6,7 @@ void main() {
 }
 
 class WeatherApp extends StatelessWidget {
-  const WeatherApp({Key? key}) : super(key: key);
+  const WeatherApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,10 +14,7 @@ class WeatherApp extends StatelessWidget {
       title: 'Weather App',
       debugShowCheckedModeBanner: false,
       home: const HomeScreen(),
-      theme: ThemeData(
-        fontFamily: 'Roboto',
-        brightness: Brightness.light,
-      ),
+      theme: ThemeData(fontFamily: 'Roboto', brightness: Brightness.light),
     );
   }
 }
