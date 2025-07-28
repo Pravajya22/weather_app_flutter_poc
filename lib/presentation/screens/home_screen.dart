@@ -16,7 +16,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _controller = TextEditingController();
   bool hasSearched = false;
 
-// Removed unused mock data for forecast
   String _getBackgroundImage(String condition) {
     switch (condition.toLowerCase()) {
       case 'sun':
