@@ -112,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (hasSearched) ...[
                       const SizedBox(height: 40),
                       MiddleSection(
-                        city: 'Ahmedabad',
+                        city: city,
                         temperature: '31°C',
                         humidity: '58%',
                         windSpeed: '12 km/h',
