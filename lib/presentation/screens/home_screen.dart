@@ -60,20 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const TopSection(),
                     const SizedBox(height: 20),
-                    TextField(
-                      controller: _controller,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Enter City Name',
-                        hintStyle: const TextStyle(color: Colors.white70),
-                        filled: true,
-                        fillColor: Colors.white24,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
                     Center(
                       child: SizedBox(
                         width: 160,
