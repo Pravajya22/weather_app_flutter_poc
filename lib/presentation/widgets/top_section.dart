@@ -24,7 +24,7 @@ class TopSection extends StatelessWidget {
             filled: true,
             fillColor: Colors.white24,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
               borderSide: BorderSide.none,
             ),
           ),
