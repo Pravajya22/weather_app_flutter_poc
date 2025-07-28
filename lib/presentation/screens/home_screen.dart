@@ -16,19 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _controller = TextEditingController();
   bool hasSearched = false;
 
-  // Mock data for forecast
-  final List<Map<String, String>> pastForecast = [
-    {'day': 'Mon', 'icon': '☀️', 'temp': '31°C'},
-    {'day': 'Tue', 'icon': '🌧️', 'temp': '29°C'},
-    {'day': 'Wed', 'icon': '⛅', 'temp': '30°C'},
-  ];
-
-  final List<Map<String, String>> futureForecast = [
-    {'day': 'Thu', 'icon': '☀️', 'temp': '33°C'},
-    {'day': 'Fri', 'icon': '🌧️', 'temp': '28°C'},
-    {'day': 'Sat', 'icon': '❄️', 'temp': '27°C'},
-  ];
-
+// Removed unused mock data for forecast
   String _getBackgroundImage(String condition) {
     switch (condition.toLowerCase()) {
       case 'sun':
