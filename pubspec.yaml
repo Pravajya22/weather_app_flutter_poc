@@ -58,11 +58,7 @@ dev_dependencies:
 flutter:
   assets:
     - .env
-    - assets/images/sunny.jpg
-    - assets/images/rainy.jpg
-    - assets/images/cloudy.jpg
-    - assets/images/snowy.jpg
-    - assets/images/default.jpg
+    - assets/images/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
