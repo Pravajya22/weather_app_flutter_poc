@@ -20,7 +20,7 @@ class TopSection extends StatelessWidget {
         TextField(
           decoration: InputDecoration(
             hintText: 'Enter city, state, or country',
-            hintStyle: TextStyle(color: Colors.white70),
+            hintStyle: const TextStyle(color: Colors.white70),
             filled: true,
             fillColor: Colors.white24,
             border: OutlineInputBorder(
