@@ -31,7 +31,7 @@ class BottomSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(data['icon'] ?? '🌤️', style: const TextStyle(fontSize: 28)),
+          Text(data['icon'] ?? defaultWeatherIcon, style: const TextStyle(fontSize: 28)),
           const SizedBox(height: 6),
           Text(
             data['date'] ?? '',
