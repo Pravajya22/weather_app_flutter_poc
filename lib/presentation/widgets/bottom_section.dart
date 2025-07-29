@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+const String defaultWeatherIcon = '☀️';
+
 class BottomSection extends StatelessWidget {
   final List<Map<String, String>> pastForecast;
   final List<Map<String, String>> futureForecast;
@@ -31,7 +33,10 @@ class BottomSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(data['icon'] ?? defaultWeatherIcon, style: const TextStyle(fontSize: 28)),
+          Text(
+            data['icon'] ?? defaultWeatherIcon,
+            style: const TextStyle(fontSize: 28),
+          ),
           const SizedBox(height: 6),
           Text(
             data['date'] ?? '',
