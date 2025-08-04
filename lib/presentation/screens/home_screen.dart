@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/top_section.dart';
 import '../widgets/middle_section.dart';
 import '../widgets/bottom_section.dart';
+import '../../services/weather_api_service.dart';
+import '../../models/current_weather_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,13 +18,25 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _controller = TextEditingController();
   bool hasSearched = false;
 
+  // dynamic values from API
+  String temperature = '';
+  String humidity = '';
+  String windSpeed = '';
+  String weatherDescription = '';
+  String weatherIcon = '';
+  String day = '';
+  String date = '';
+
   String _getBackgroundImage(String condition) {
     switch (condition.toLowerCase()) {
       case 'sun':
+      case 'clear':
         return 'assets/images/sunny.jpg';
       case 'rain':
+      case 'rainy':
         return 'assets/images/rainy.jpg';
       case 'clouds':
+      case 'cloudy':
         return 'assets/images/cloudy.jpg';
       case 'snow':
         return 'assets/images/snowy.jpg';
@@ -31,14 +45,31 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _onSearch() {
-    setState(() {
-      city = _controller.text.trim().isEmpty
-          ? 'Ahmedabad'
-          : _controller.text.trim();
-      weatherCondition = 'clouds'; // mock
-      hasSearched = true;
-    });
+  Future<void> _onSearch() async {
+    String query = _controller.text.trim().isEmpty
+        ? 'Ahmedabad'
+        : _controller.text.trim();
+
+    final weather = await WeatherApiService.fetchCurrentWeather(query);
+
+    if (weather != null) {
+      setState(() {
+        city = weather.cityName;
+        weatherCondition = weather.description;
+        temperature = '${weather.temperature}°C';
+        humidity = '${weather.humidity}%';
+        windSpeed = '${weather.windSpeed} km/h';
+        weatherDescription = weather.description;
+        weatherIcon = weather.icon;
+        day = weather.day;
+        date = weather.date;
+        hasSearched = true;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('City not found or API error!')),
+      );
+    }
   }
 
   @override
@@ -58,7 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
-                    const TopSection(),
+                    TopSection(controller: _controller, onSearch: _onSearch),
+
                     const SizedBox(height: 20),
                     Center(
                       child: SizedBox(
@@ -86,57 +118,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 40),
                       MiddleSection(
                         city: city,
-                        temperature: '31°C',
-                        humidity: '58%',
-                        windSpeed: '12 km/h',
-                        weatherDescription: 'Cloudy',
-                        weatherIcon: '☁️',
-                        day: 'Friday',
-                        date: '18 July 2025',
+                        temperature: temperature,
+                        humidity: humidity,
+                        windSpeed: windSpeed,
+                        weatherDescription: weatherDescription,
+                        weatherIcon: weatherIcon,
+                        day: day,
+                        date: date,
                       ),
                       const SizedBox(height: 20),
-                      BottomSection(
-                        pastForecast: [
-                          {
-                            'day': 'Tue',
-                            'icon': '🌦️',
-                            'date': '15 Jul',
-                            'temp': '28°C',
-                          },
-                          {
-                            'day': 'Wed',
-                            'icon': '🌧️',
-                            'date': '16 Jul',
-                            'temp': '26°C',
-                          },
-                          {
-                            'day': 'Thu',
-                            'icon': '⛅',
-                            'date': '17 Jul',
-                            'temp': '27°C',
-                          },
-                        ],
-                        futureForecast: [
-                          {
-                            'day': 'Sat',
-                            'icon': '🌤️',
-                            'date': '19 Jul',
-                            'temp': '30°C',
-                          },
-                          {
-                            'day': 'Sun',
-                            'icon': '🌦️',
-                            'date': '20 Jul',
-                            'temp': '29°C',
-                          },
-                          {
-                            'day': 'Mon',
-                            'icon': '☀️',
-                            'date': '21 Jul',
-                            'temp': '31°C',
-                          },
-                        ],
-                      ),
+                      const BottomSection(pastForecast: [], futureForecast: []),
                     ],
                   ],
                 ),

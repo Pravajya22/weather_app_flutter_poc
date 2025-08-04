@@ -1,34 +1,41 @@
 import 'package:flutter/material.dart';
 
 class TopSection extends StatelessWidget {
-  const TopSection({super.key});
+  final TextEditingController controller;
+  final VoidCallback onSearch;
+
+  const TopSection({
+    super.key,
+    required this.controller,
+    required this.onSearch,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        const Text(
-          'Weather App',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+        Expanded(
+          child: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: 'Enter City / State / Country',
+              hintStyle: const TextStyle(color: Colors.white70),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.2),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              prefixIcon: const Icon(Icons.search, color: Colors.white70),
+            ),
+            style: const TextStyle(color: Colors.white),
+            onSubmitted: (_) => onSearch(),
           ),
         ),
-        const SizedBox(height: 16),
-        TextField(
-          decoration: InputDecoration(
-            hintText: 'Enter city, state, or country',
-            hintStyle: const TextStyle(color: Colors.white70),
-            filled: true,
-            fillColor: Colors.white24,
-            border: OutlineInputBorder(
-              borderRadius: const BorderRadius.all(Radius.circular(8)),
-              borderSide: BorderSide.none,
-            ),
-          ),
-          style: const TextStyle(color: Colors.white),
+        const SizedBox(width: 10),
+        IconButton(
+          icon: const Icon(Icons.send, color: Colors.white),
+          onPressed: onSearch,
         ),
       ],
     );
