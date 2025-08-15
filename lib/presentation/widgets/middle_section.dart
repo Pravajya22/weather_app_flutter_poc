@@ -50,9 +50,10 @@ class MiddleSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            weatherIcon,
-            style: const TextStyle(fontSize: 54),
+          Image.network(
+            'http://openweathermap.org/img/wn/$weatherIcon@2x.png',
+            width: 54,
+            height: 54,
           ),
           Text(
             weatherDescription,

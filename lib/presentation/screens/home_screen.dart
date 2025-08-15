@@ -50,16 +50,17 @@ class _HomeScreenState extends State<HomeScreen> {
         ? 'Ahmedabad'
         : _controller.text.trim();
 
-    final weather = await WeatherApiService.fetchCurrentWeather(query);
+    final weatherService = WeatherApiService();
+    final weather = await weatherService.fetchCurrentWeather(query);
 
     if (weather != null) {
       setState(() {
         city = weather.cityName;
-        weatherCondition = weather.description;
+        weatherCondition = weather.mainCondition;
         temperature = '${weather.temperature}°C';
         humidity = '${weather.humidity}%';
         windSpeed = '${weather.windSpeed} km/h';
-        weatherDescription = weather.description;
+        weatherDescription = CurrentWeather.capitalizeDescription(weather.description);
         weatherIcon = weather.icon;
         day = weather.day;
         date = weather.date;
@@ -74,7 +75,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final String backgroundImage = _getBackgroundImage(weatherCondition);
+    final String backgroundImage = hasSearched 
+        ? _getBackgroundImage(weatherCondition) 
+        : 'assets/images/default.jpg';
 
     return Scaffold(
       resizeToAvoidBottomInset: true,

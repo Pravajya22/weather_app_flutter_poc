@@ -4,6 +4,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv for enviro
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
+
+  // Debug print to verify key is loaded
+  print(dotenv.env['OPENWEATHER_API_KEY']);
+
   runApp(const WeatherApp());
 }
 
