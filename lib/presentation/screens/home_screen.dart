@@ -4,6 +4,7 @@ import '../widgets/middle_section.dart';
 import '../widgets/bottom_section.dart';
 import '../../services/weather_api_service.dart';
 import '../../models/current_weather_model.dart';
+import '../../models/forecast_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,6 +27,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String weatherIcon = '';
   String day = '';
   String date = '';
+
+  // forecast data
+  List<DailyForecast> pastForecast = [];
+  List<DailyForecast> futureForecast = [];
 
   String _getBackgroundImage(String condition) {
     switch (condition.toLowerCase()) {
@@ -51,7 +56,12 @@ class _HomeScreenState extends State<HomeScreen> {
         : _controller.text.trim();
 
     final weatherService = WeatherApiService();
+
+    // Fetch current weather
     final weather = await weatherService.fetchCurrentWeather(query);
+
+    // Fetch extended forecast data (past 3 days + upcoming 3 days)
+    final extendedForecast = await weatherService.getExtendedForecast(query);
 
     if (weather != null) {
       setState(() {
@@ -60,11 +70,17 @@ class _HomeScreenState extends State<HomeScreen> {
         temperature = '${weather.temperature}°C';
         humidity = '${weather.humidity}%';
         windSpeed = '${weather.windSpeed} km/h';
-        weatherDescription = CurrentWeather.capitalizeDescription(weather.description);
+        weatherDescription = CurrentWeather.capitalizeDescription(
+          weather.description,
+        );
         weatherIcon = weather.icon;
         day = weather.day;
         date = weather.date;
         hasSearched = true;
+
+        // Process extended forecast data
+        pastForecast = extendedForecast['past'] ?? [];
+        futureForecast = extendedForecast['future'] ?? [];
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,8 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final String backgroundImage = hasSearched 
-        ? _getBackgroundImage(weatherCondition) 
+    final String backgroundImage = hasSearched
+        ? _getBackgroundImage(weatherCondition)
         : 'assets/images/default.jpg';
 
     return Scaffold(
@@ -130,7 +146,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         date: date,
                       ),
                       const SizedBox(height: 20),
-                      const BottomSection(pastForecast: [], futureForecast: []),
+                      BottomSection(
+                        pastForecast: pastForecast,
+                        futureForecast: futureForecast,
+                      ),
                     ],
                   ],
                 ),
