@@ -51,9 +51,16 @@ class MiddleSection extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Image.network(
-            'http://openweathermap.org/img/wn/$weatherIcon@2x.png',
+            'https://raw.githubusercontent.com/visualcrossing/WeatherIcons/main/PNG/2nd%20Set%20-%20Color/$weatherIcon.png',
             width: 54,
             height: 54,
+            errorBuilder: (context, error, stackTrace) {
+              return Image.network(
+                'http://openweathermap.org/img/wn/$weatherIcon@2x.png',
+                width: 54,
+                height: 54,
+              );
+            },
           ),
           Text(
             weatherDescription,

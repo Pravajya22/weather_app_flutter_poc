@@ -29,29 +29,23 @@ class CurrentWeather {
 
   factory CurrentWeather.fromJson(Map<String, dynamic> json) {
     try {
-      final DateTime dateTime = DateTime.fromMillisecondsSinceEpoch(
-        (json['dt'] as int) * 1000,
-        isUtc: true,
-      ).toLocal();
+      final DateTime dateTime = DateTime.now();
       final String formattedDate =
           '${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}';
       final String dayName = _getDayName(dateTime.weekday);
 
-      // Validate and extract weather data with proper type checking
-      final mainData = json['main'] as Map<String, dynamic>? ?? {};
-      final weatherData = json['weather'] as List<dynamic>? ?? [];
-      final windData = json['wind'] as Map<String, dynamic>? ?? {};
-      
-      final weatherItem = weatherData.isNotEmpty ? weatherData[0] as Map<String, dynamic> : {};
+      // Handle VirtualCrossing API response format
+      final currentConditions = json['currentConditions'] as Map<String, dynamic>? ?? {};
+      final address = json['address'] as String? ?? 'Unknown City';
       
       return CurrentWeather(
-        cityName: (json['name'] as String?) ?? 'Unknown City',
-        temperature: (mainData['temp'] as num?)?.toDouble() ?? 0.0,
-        humidity: (mainData['humidity'] as int?) ?? 0,
-        windSpeed: (windData['speed'] as num?)?.toDouble() ?? 0.0,
-        description: capitalizeDescription((weatherItem['description'] as String?) ?? 'No description'),
-        mainCondition: (weatherItem['main'] as String?) ?? 'Unknown',
-        icon: (weatherItem['icon'] as String?) ?? '01d',
+        cityName: address,
+        temperature: (currentConditions['temp'] as num?)?.toDouble() ?? 0.0,
+        humidity: (currentConditions['humidity'] as num?)?.round() ?? 0,
+        windSpeed: (currentConditions['windspeed'] as num?)?.toDouble() ?? 0.0,
+        description: capitalizeDescription((currentConditions['conditions'] as String?) ?? 'No description'),
+        mainCondition: (currentConditions['icon'] as String?) ?? 'Unknown',
+        icon: _mapVirtualCrossingIcon(currentConditions['icon'] as String? ?? 'clear-day'),
         day: dayName,
         date: formattedDate,
       );
@@ -70,6 +64,33 @@ class CurrentWeather {
         date: 'Error',
       );
     }
+  }
+
+  static String _mapVirtualCrossingIcon(String virtualCrossingIcon) {
+    // Map VirtualCrossing icons to weather icon codes
+    const iconMap = {
+      'clear-day': '01d',
+      'clear-night': '01n',
+      'partly-cloudy-day': '02d',
+      'partly-cloudy-night': '02n',
+      'cloudy': '03d',
+      'overcast': '04d',
+      'fog': '50d',
+      'wind': '50d',
+      'rain': '09d',
+      'showers-day': '09d',
+      'showers-night': '09n',
+      'thunder-rain': '11d',
+      'thunder-showers-day': '11d',
+      'thunder-showers-night': '11n',
+      'snow': '13d',
+      'snow-showers-day': '13d',
+      'snow-showers-night': '13n',
+      'hail': '13d',
+      'sleet': '13d',
+    };
+    
+    return iconMap[virtualCrossingIcon] ?? '01d';
   }
 
   static String _getDayName(int weekday) {

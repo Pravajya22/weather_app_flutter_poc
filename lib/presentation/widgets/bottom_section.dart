@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/forecast_model.dart';
+import 'package:intl/intl.dart';
+
 
 const String defaultWeatherIcon = '☀️';
 
@@ -13,142 +15,7 @@ class BottomSection extends StatelessWidget {
     required this.futureForecast,
   });
 
-  Widget _buildDetailedForecastItem(DailyForecast forecast, bool isPast) {
-    return Container(
-      width: 100,
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      decoration: BoxDecoration(
-        color: isPast 
-            ? Colors.white.withOpacity(0.15) 
-            : Colors.white.withOpacity(0.25),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isPast 
-              ? Colors.white.withOpacity(0.3) 
-              : Colors.white.withOpacity(0.5),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Day and Date - reduced spacing
-          Text(
-            forecast.day,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isPast ? Colors.white.withOpacity(0.7) : Colors.white,
-              fontSize: 10,
-            ),
-          ),
-          Text(
-            forecast.date,
-            style: TextStyle(
-              color: isPast ? Colors.white.withOpacity(0.6) : Colors.white.withOpacity(0.8),
-              fontSize: 8,
-            ),
-          ),
-          
-          const SizedBox(height: 2),
-          
-          // Weather Icon - reduced size
-          Text(
-            _getWeatherIcon(forecast.icon),
-            style: const TextStyle(fontSize: 20),
-          ),
-          
-          const SizedBox(height: 1),
-          
-          // Temperature - reduced font sizes
-          Text(
-            '${forecast.maxTemp.toStringAsFixed(0)}°',
-            style: TextStyle(
-              color: isPast ? Colors.white.withOpacity(0.7) : Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            '${forecast.minTemp.toStringAsFixed(0)}°',
-            style: TextStyle(
-              color: isPast ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.7),
-              fontSize: 10,
-            ),
-          ),
-          
-          const SizedBox(height: 1),
-          
-          // Weather Description - more compact
-          Text(
-            forecast.description,
-            style: TextStyle(
-              color: isPast ? Colors.white.withOpacity(0.6) : Colors.white.withOpacity(0.8),
-              fontSize: 7,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          
-          const SizedBox(height: 1),
-          
-          // Additional Details - more compact
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.water_drop, size: 8, color: Colors.lightBlue.withOpacity(0.8)),
-              const SizedBox(width: 1),
-              Text(
-                '${forecast.humidity}%',
-                style: TextStyle(
-                  color: isPast ? Colors.white.withOpacity(0.6) : Colors.white.withOpacity(0.8),
-                  fontSize: 7,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 0.5),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.air, size: 8, color: Colors.white.withOpacity(0.7)),
-              const SizedBox(width: 1),
-              Text(
-                '${forecast.windSpeed.toStringAsFixed(0)}',
-                style: TextStyle(
-                  color: isPast ? Colors.white.withOpacity(0.6) : Colors.white.withOpacity(0.8),
-                  fontSize: 7,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // Get weather icon based on icon code
   String _getWeatherIcon(String iconCode) {
     switch (iconCode) {
       case '01d':
@@ -183,39 +50,215 @@ class BottomSection extends StatelessWidget {
     }
   }
 
+  // Individual forecast item UI
+  Widget _buildDetailedForecastItem(
+    DailyForecast forecast,
+    bool isPast,
+  ) {
+    return Container(
+      width: 100,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      decoration: BoxDecoration(
+        color: isPast
+            ? Colors.white.withOpacity(0.2)
+            : Colors.white.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isPast
+              ? Colors.white.withOpacity(0.4)
+              : Colors.white.withOpacity(0.6),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Text(
+            forecast.day,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isPast ? Colors.white.withOpacity(0.8) : Colors.white,
+              fontSize: 11,
+            ),
+          ),
+          Text(
+            forecast.date,
+            style: TextStyle(
+              color: isPast
+                  ? Colors.white.withOpacity(0.7)
+                  : Colors.white.withOpacity(0.9),
+              fontSize: 9,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            _getWeatherIcon(forecast.icon),
+            style: const TextStyle(fontSize: 20),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${forecast.maxTemp.toStringAsFixed(0)}°',
+            style: TextStyle(
+              color: isPast ? Colors.white.withOpacity(0.7) : Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            '${forecast.minTemp.toStringAsFixed(0)}°',
+            style: TextStyle(
+              color: isPast
+                  ? Colors.white.withOpacity(0.5)
+                  : Colors.white.withOpacity(0.7),
+              fontSize: 10,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Expanded(
+            child: Text(
+              forecast.description,
+              style: TextStyle(
+                color: isPast
+                    ? Colors.white.withOpacity(0.6)
+                    : Colors.white.withOpacity(0.8),
+                fontSize: 7,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.water_drop,
+                  size: 8, color: Colors.lightBlue.withOpacity(0.8)),
+              const SizedBox(width: 2),
+              Text(
+                '${forecast.humidity}%',
+                style: TextStyle(
+                  color: isPast
+                      ? Colors.white.withOpacity(0.6)
+                      : Colors.white.withOpacity(0.8),
+                  fontSize: 7,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 1),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.air, size: 8, color: Colors.white.withOpacity(0.7)),
+              const SizedBox(width: 2),
+              Text(
+                '${forecast.windSpeed.toStringAsFixed(0)}',
+                style: TextStyle(
+                  color: isPast
+                      ? Colors.white.withOpacity(0.6)
+                      : Colors.white.withOpacity(0.8),
+                  fontSize: 7,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Get last 3 days from past forecast and first 3 days from future forecast
-    final List<DailyForecast> recentPast = pastForecast.take(3).toList();
-    final List<DailyForecast> upcomingFuture = futureForecast.take(3).toList();
-    
-    // Combine all forecasts into a single list
-    final List<DailyForecast> allForecasts = [
-      ...recentPast,
-      ...upcomingFuture,
-    ];
-    
+    DateTime now = DateTime.now();
+    DateTime todayOnly = DateTime(now.year, now.month, now.day);
+
+    print("Past Forecast (raw):");
+for (var f in pastForecast) {
+  print("Past → ${f.date} → ${f.day}");
+}
+
+print("Future Forecast (raw):");
+for (var f in futureForecast) {
+  print("Future → ${f.date} → ${f.day}");
+}
+
+
+    // Helper to parse from dd-MM (like 20-08)
+    DateTime parseDateString(String dateStr) {
+      try {
+        final parts = dateStr.split('-');
+        if (parts.length == 2) {
+          final day = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          return DateTime(now.year, month, day);
+        }
+      } catch (_) {}
+      return todayOnly;
+    }
+
+    // Fix: Get 3 full past days excluding today
+    List<DailyForecast> pastList = pastForecast
+        .where((f) => parseDateString(f.date).isBefore(todayOnly))
+        .toList()
+      ..sort((a, b) => parseDateString(b.date).compareTo(parseDateString(a.date)));
+
+    // 🔥 Fix here: make sure we get up to 3
+    List<DailyForecast> pastThree =
+        pastList.length >= 3 ? pastList.take(3).toList().reversed.toList() : pastList.reversed.toList();
+
+    // Upcoming forecast (after today)
+    List<DailyForecast> futureList = futureForecast
+        .where((f) => parseDateString(f.date).isAfter(todayOnly))
+        .toList()
+      ..sort((a, b) => parseDateString(a.date).compareTo(parseDateString(b.date)));
+
+    List<DailyForecast> futureThree = futureList.take(3).toList();
+
+    // Combine for display
+    final List<DailyForecast> allForecasts = [...pastThree, ...futureThree];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Combined Weather Forecast Section
         if (allForecasts.isNotEmpty) ...[
-          _buildSectionHeader('Weather Forecast', Icons.calendar_view_day),
+          _buildSectionHeader('Past & Upcoming Weather', Icons.calendar_today),
           SizedBox(
-            height: 150,
+            height: 160,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              physics: const AlwaysScrollableScrollPhysics(),
               itemCount: allForecasts.length,
               itemBuilder: (context, index) {
-                final isPast = index < recentPast.length;
-                return _buildDetailedForecastItem(allForecasts[index], isPast);
+                final isPast = index < pastThree.length;
+                return _buildDetailedForecastItem(
+                  allForecasts[index],
+                  isPast,
+                );
               },
             ),
           ),
         ],
-        
-        // Empty state
         if (allForecasts.isEmpty) ...[
           const Center(
             child: Padding(
