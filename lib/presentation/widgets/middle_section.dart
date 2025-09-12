@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/api_constants.dart';
 
 class MiddleSection extends StatelessWidget {
   final String city;
@@ -51,7 +52,7 @@ class MiddleSection extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Image.network(
-            'https://raw.githubusercontent.com/visualcrossing/WeatherIcons/main/PNG/2nd%20Set%20-%20Color/$weatherIcon.png',
+            ApiConstants.getIconUrl(weatherIcon),
             width: 54,
             height: 54,
             errorBuilder: (context, error, stackTrace) {

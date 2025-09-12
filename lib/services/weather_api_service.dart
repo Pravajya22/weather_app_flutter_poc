@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/current_weather_model.dart';
 import '../models/forecast_model.dart';
+import '../core/api_constants.dart';
 
 class WeatherApiService {
   Future<CurrentWeather?> fetchCurrentWeather(String city) async {
@@ -153,8 +154,8 @@ class WeatherApiService {
     String city,
   ) async {
     try {
-      final apiKey = dotenv.env['VIRTUALCROSSING_API_KEY'];
-      final baseUrl = dotenv.env['VIRTUALCROSSING_BASE_URL'];
+      final apiKey = ApiConstants.apiKey;
+      final baseUrl = ApiConstants.baseUrl;
 
       if (apiKey == null || baseUrl == null) {
         throw Exception("Missing API credentials.");

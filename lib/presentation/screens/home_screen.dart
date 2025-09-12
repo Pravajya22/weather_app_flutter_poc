@@ -71,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
         humidity = '${weather.humidity}%';
         windSpeed = '${weather.windSpeed} km/h';
         weatherDescription = CurrentWeather.capitalizeDescription(
-          weather.description,
+          weather.description
         );
         weatherIcon = weather.icon;
         day = weather.day;

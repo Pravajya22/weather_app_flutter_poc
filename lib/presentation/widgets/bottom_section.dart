@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/forecast_model.dart';
 import 'package:intl/intl.dart';
 
-
 const String defaultWeatherIcon = '☀️';
 
 class BottomSection extends StatelessWidget {
@@ -51,10 +50,7 @@ class BottomSection extends StatelessWidget {
   }
 
   // Individual forecast item UI
-  Widget _buildDetailedForecastItem(
-    DailyForecast forecast,
-    bool isPast,
-  ) {
+  Widget _buildDetailedForecastItem(DailyForecast forecast, bool isPast) {
     return Container(
       width: 100,
       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -133,8 +129,11 @@ class BottomSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.water_drop,
-                  size: 8, color: Colors.lightBlue.withOpacity(0.8)),
+              Icon(
+                Icons.water_drop,
+                size: 8,
+                color: Colors.lightBlue.withOpacity(0.8),
+              ),
               const SizedBox(width: 2),
               Text(
                 '${forecast.humidity}%',
@@ -195,15 +194,14 @@ class BottomSection extends StatelessWidget {
     DateTime todayOnly = DateTime(now.year, now.month, now.day);
 
     print("Past Forecast (raw):");
-for (var f in pastForecast) {
-  print("Past → ${f.date} → ${f.day}");
-}
+    for (var f in pastForecast) {
+      print("Past → ${f.date} → ${f.day}");
+    }
 
-print("Future Forecast (raw):");
-for (var f in futureForecast) {
-  print("Future → ${f.date} → ${f.day}");
-}
-
+    print("Future Forecast (raw):");
+    for (var f in futureForecast) {
+      print("Future → ${f.date} → ${f.day}");
+    }
 
     // Helper to parse from dd-MM (like 20-08)
     DateTime parseDateString(String dateStr) {
@@ -219,21 +217,30 @@ for (var f in futureForecast) {
     }
 
     // Fix: Get 3 full past days excluding today
-    List<DailyForecast> pastList = pastForecast
-        .where((f) => parseDateString(f.date).isBefore(todayOnly))
-        .toList()
-      ..sort((a, b) => parseDateString(b.date).compareTo(parseDateString(a.date)));
+    List<DailyForecast> pastList =
+        pastForecast
+            .where((f) => parseDateString(f.date).isBefore(todayOnly))
+            .toList()
+          ..sort(
+            (a, b) =>
+                parseDateString(b.date).compareTo(parseDateString(a.date)),
+          );
 
     // 🔥 Fix here: make sure we get up to 3
-    List<DailyForecast> pastThree =
-        pastList.length >= 3 ? pastList.take(3).toList().reversed.toList() : pastList.reversed.toList();
+    List<DailyForecast> pastThree = pastList.length >= 3
+        ? pastList.take(3).toList().reversed.toList()
+        : pastList.reversed.toList();
 
     // Upcoming forecast (after today)
-    List<DailyForecast> futureList = futureForecast
-        .where((f) => parseDateString(f.date).isAfter(todayOnly))
-        .toList()
-      ..sort((a, b) => parseDateString(a.date).compareTo(parseDateString(b.date)));
-
+    List<DailyForecast> futureList =
+        futureForecast
+            .where((f) => parseDateString(f.date).isAfter(todayOnly))
+            .toList()
+          ..sort(
+            (a, b) =>
+                parseDateString(a.date).compareTo(parseDateString(b.date)),
+          );
+  
     List<DailyForecast> futureThree = futureList.take(3).toList();
 
     // Combine for display
@@ -243,7 +250,7 @@ for (var f in futureForecast) {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (allForecasts.isNotEmpty) ...[
-          _buildSectionHeader('Past & Upcoming Weather', Icons.calendar_today),
+          _buildSectionHeader('Weekly Weather', Icons.calendar_today),
           SizedBox(
             height: 160,
             child: ListView.builder(
@@ -251,10 +258,7 @@ for (var f in futureForecast) {
               itemCount: allForecasts.length,
               itemBuilder: (context, index) {
                 final isPast = index < pastThree.length;
-                return _buildDetailedForecastItem(
-                  allForecasts[index],
-                  isPast,
-                );
+                return _buildDetailedForecastItem(allForecasts[index], isPast);
               },
             ),
           ),
