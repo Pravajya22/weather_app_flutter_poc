@@ -28,10 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String day = '';
   String date = '';
 
-  // forecast data
-  List<DailyForecast> pastForecast = [];
-  List<DailyForecast> futureForecast = [];
-
   String _getBackgroundImage(String condition) {
     switch (condition.toLowerCase()) {
       case 'sun':
@@ -51,17 +47,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _onSearch() async {
-    String query = _controller.text.trim().isEmpty
+    final query = _controller.text.trim().isEmpty
         ? 'Ahmedabad'
         : _controller.text.trim();
 
-    final weatherService = WeatherApiService();
-
-    // Fetch current weather
-    final weather = await weatherService.fetchCurrentWeather(query);
-
-    // Fetch extended forecast data (past 3 days + upcoming 3 days)
-    final extendedForecast = await weatherService.getExtendedForecast(query);
+    final service = WeatherApiService();
+    final weather = await service.fetchCurrentWeather(query);
 
     if (weather != null) {
       setState(() {
@@ -71,16 +62,12 @@ class _HomeScreenState extends State<HomeScreen> {
         humidity = '${weather.humidity}%';
         windSpeed = '${weather.windSpeed} km/h';
         weatherDescription = CurrentWeather.capitalizeDescription(
-          weather.description
+          weather.description,
         );
         weatherIcon = weather.icon;
         day = weather.day;
         date = weather.date;
         hasSearched = true;
-
-        // Process extended forecast data
-        pastForecast = extendedForecast['past'] ?? [];
-        futureForecast = extendedForecast['future'] ?? [];
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -109,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   children: [
                     TopSection(controller: _controller, onSearch: _onSearch),
-
                     const SizedBox(height: 20),
                     Center(
                       child: SizedBox(
@@ -147,8 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 20),
                       BottomSection(
-                        pastForecast: pastForecast,
-                        futureForecast: futureForecast,
+                        city: city,
                       ),
                     ],
                   ],
