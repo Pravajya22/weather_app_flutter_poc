@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'presentation/screens/home_screen.dart'; // Import your custom screen
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv for environment variables
 
-void main() {
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
+
+  // Debug print to verify key is loaded
+  print(dotenv.env['OPENWEATHER_API_KEY']);
+
   runApp(const WeatherApp());
 }
 
