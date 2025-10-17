@@ -1,16 +1,14 @@
+// lib/presentation/widgets/bottom_section.dart
 import 'package:flutter/material.dart';
 import '../../models/forecast_model.dart';
 import '../../services/weather_api_service.dart';
+import 'package:intl/intl.dart';
 
 const String defaultWeatherIcon = '☀️';
 
 class BottomSection extends StatefulWidget {
   final String city;
-
-  const BottomSection({
-    super.key,
-    required this.city,
-  });
+  const BottomSection({super.key, required this.city});
 
   @override
   State<BottomSection> createState() => _BottomSectionState();
@@ -19,54 +17,153 @@ class BottomSection extends StatefulWidget {
 class _BottomSectionState extends State<BottomSection> {
   final PageController _pageController = PageController(initialPage: 100);
   final WeatherApiService _apiService = WeatherApiService();
+
   final Map<int, List<DailyForecast>> _cachedWeeks = {};
+  final Set<int> _loadingPages = {};
+  final Map<int, ScrollController> _innerControllers = {};
+
   int _currentPage = 100;
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _fetchWeek(_currentPage);
-    _pageController.addListener(() {
-      if (_pageController.page?.round() != _currentPage) {
-        setState(() {
-          _currentPage = _pageController.page?.round() ?? _currentPage;
-        });
-        _fetchWeek(_currentPage);
-      }
+    _preloadAround(_currentPage);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeCenterTodayOnPage(_currentPage);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant BottomSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.city != oldWidget.city) {
+      _cachedWeeks.clear();
+      _loadingPages.clear();
+      _innerControllers.forEach((_, controller) => controller.dispose());
+      _innerControllers.clear();
+      _currentPage = 100;
+      _pageController.jumpToPage(100);
+      _fetchWeek(_currentPage);
+      _preloadAround(_currentPage);
+    }
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _innerControllers.forEach((_, c) => c.dispose());
+    _innerControllers.clear();
     super.dispose();
   }
 
+  void _preloadAround(int page) {
+    for (int i = -1; i <= 1; i++) {
+      final idx = page + i;
+      // Always attempt fetching regardless of direction
+      if (!_cachedWeeks.containsKey(idx)) _fetchWeek(idx);
+    }
+  }
+
+  DateTime _getWeekStartDate(int pageIndex) {
+    final now = DateTime.now();
+    final currentMonday = now.subtract(Duration(days: now.weekday - 1));
+    return currentMonday.add(Duration(days: (pageIndex - 100) * 7));
+  }
+
+  String _formatDdMm(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}';
+
+  String _getDayShortName(int weekday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[weekday - 1];
+  }
+
+  DailyForecast _makePlaceholder(DateTime date) {
+    final day = _getDayShortName(date.weekday);
+    final dateStr = _formatDdMm(date);
+    return DailyForecast(
+      day: day,
+      date: dateStr,
+      maxTemp: 0.0,
+      minTemp: 0.0,
+      temperature: 0.0,
+      humidity: 0,
+      windSpeed: 0.0,
+      description: 'No data',
+      mainCondition: 'Unknown',
+      icon: '01d',
+      feelsLike: 0.0,
+      pressure: 0.0,
+      uvIndex: 0.0,
+    );
+  }
+
   Future<void> _fetchWeek(int pageIndex) async {
-    if (_cachedWeeks.containsKey(pageIndex) || _isLoading) {
+    // No restriction on past/future weeks
+    if (_cachedWeeks.containsKey(pageIndex) ||
+        _loadingPages.contains(pageIndex)) {
       return;
     }
-    setState(() => _isLoading = true);
+    _loadingPages.add(pageIndex);
 
-    final now = DateTime.now();
-    final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final startDate = firstDayOfWeek.add(Duration(days: (pageIndex - 100) * 7));
-    final endDate = startDate.add(const Duration(days: 6));
+    final start = _getWeekStartDate(pageIndex);
+    final end = start.add(const Duration(days: 6));
 
-    final weekForecast = await _apiService.getForecastForDateRange(
-      widget.city,
-      startDate,
-      endDate,
-    );
+    try {
+      final fetched =
+          await _apiService.getForecastForDateRange(widget.city, start, end);
 
-    setState(() {
-      _cachedWeeks[pageIndex] = weekForecast;
-      _isLoading = false;
+      final Map<String, DailyForecast> byDate = {};
+      for (var d in fetched) {
+        byDate[d.date] = d;
+      }
+
+      final List<DailyForecast> weekList = [];
+      for (int i = 0; i < 7; i++) {
+        final dt = start.add(Duration(days: i));
+        final key = _formatDdMm(dt);
+        final item = byDate[key] ?? _makePlaceholder(dt);
+        weekList.add(item);
+      }
+
+      if (mounted) {
+        _innerControllers.putIfAbsent(pageIndex, () => ScrollController());
+        setState(() {
+          _cachedWeeks[pageIndex] = weekList;
+        });
+        if (pageIndex == _currentPage) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _maybeCenterTodayOnPage(pageIndex);
+          });
+        }
+      }
+    } catch (e) {
+      final List<DailyForecast> weekList = List.generate(7, (i) {
+        final dt = _getWeekStartDate(pageIndex).add(Duration(days: i));
+        return _makePlaceholder(dt);
+      });
+      if (mounted) {
+        _innerControllers.putIfAbsent(pageIndex, () => ScrollController());
+        setState(() {
+          _cachedWeeks[pageIndex] = weekList;
+        });
+      }
+      print('⚠️ _fetchWeek error for $pageIndex: $e');
+    } finally {
+      _loadingPages.remove(pageIndex);
+    }
+  }
+
+  void _onPageChanged(int page) {
+    setState(() => _currentPage = page);
+    _preloadAround(page);
+    _innerControllers.putIfAbsent(page, () => ScrollController());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeCenterTodayOnPage(page);
     });
   }
 
-  // Get weather icon based on icon code
   String _getWeatherIcon(String iconCode) {
     switch (iconCode) {
       case '01d':
@@ -101,124 +198,194 @@ class _BottomSectionState extends State<BottomSection> {
     }
   }
 
-  // Individual forecast item UI
-  Widget _buildDetailedForecastItem(DailyForecast forecast, bool isPast) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        decoration: BoxDecoration(
-          color: isPast
-              ? Colors.white.withOpacity(0.2)
-              : Colors.white.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isPast
-                ? Colors.white.withOpacity(0.4)
-                : Colors.white.withOpacity(0.6),
-            width: 1,
+  bool _isPast(DailyForecast forecast) {
+    final today = DateTime.now();
+    try {
+      final parts = forecast.date.split('-');
+      final fd = DateTime(today.year, int.parse(parts[1]), int.parse(parts[0]));
+      final todayOnly = DateTime(today.year, today.month, today.day);
+      return fd.isBefore(todayOnly);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Widget _buildDetailedForecastItem(DailyForecast forecast, double itemWidth) {
+    final isPast = _isPast(forecast);
+    return Container(
+      width: itemWidth,
+      margin: const EdgeInsets.symmetric(horizontal: 7, vertical: 10),
+      decoration: BoxDecoration(
+        color: isPast
+            ? Colors.white.withOpacity(0.08)
+            : Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.10),
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
-        ),
+        ],
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               forecast.day,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: isPast ? Colors.white.withOpacity(0.8) : Colors.white,
-                fontSize: 11,
+                color: isPast ? Colors.white.withOpacity(0.85) : Colors.white,
+                fontSize: 15,
               ),
             ),
+            const SizedBox(height: 4),
             Text(
               forecast.date,
               style: TextStyle(
-                color: isPast
-                    ? Colors.white.withOpacity(0.7)
-                    : Colors.white.withOpacity(0.9),
-                fontSize: 9,
+                color: isPast ? Colors.white.withOpacity(0.8) : Colors.white70,
+                fontSize: 12,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 10),
             Text(
               _getWeatherIcon(forecast.icon),
-              style: const TextStyle(fontSize: 20),
+              style: const TextStyle(fontSize: 32),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 10),
             Text(
               '${forecast.maxTemp.toStringAsFixed(0)}°',
               style: TextStyle(
-                color: isPast ? Colors.white.withOpacity(0.7) : Colors.white,
-                fontSize: 12,
+                color: isPast ? Colors.white.withOpacity(0.95) : Colors.white,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
             Text(
               '${forecast.minTemp.toStringAsFixed(0)}°',
               style: TextStyle(
-                color: isPast
-                    ? Colors.white.withOpacity(0.5)
-                    : Colors.white.withOpacity(0.7),
-                fontSize: 10,
+                color: isPast ? Colors.white.withOpacity(0.75) : Colors.white70,
+                fontSize: 13,
               ),
             ),
-            const SizedBox(height: 2),
-            Expanded(
+            const SizedBox(height: 8),
+            SizedBox(
+              width: itemWidth - 12,
               child: Text(
                 forecast.description,
-                style: TextStyle(
-                  color: isPast
-                      ? Colors.white.withOpacity(0.6)
-                      : Colors.white.withOpacity(0.8),
-                  fontSize: 7,
-                ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isPast
+                      ? Colors.white.withOpacity(0.75)
+                      : Colors.white.withOpacity(0.9),
+                  fontSize: 13,
+                ),
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 8),
             Row(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.water_drop,
-                  size: 8,
-                  color: Colors.lightBlue.withOpacity(0.8),
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  '${forecast.humidity}%',
-                  style: TextStyle(
-                    color: isPast
-                        ? Colors.white.withOpacity(0.6)
-                        : Colors.white.withOpacity(0.8),
-                    fontSize: 7,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 1),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.air, size: 8, color: Colors.white.withOpacity(0.7)),
-                const SizedBox(width: 2),
-                Text(
-                  '${forecast.windSpeed.toStringAsFixed(0)}',
-                  style: TextStyle(
-                    color: isPast
-                        ? Colors.white.withOpacity(0.6)
-                        : Colors.white.withOpacity(0.8),
-                    fontSize: 7,
-                  ),
-                ),
+                Icon(Icons.water_drop,
+                    size: 14, color: Colors.lightBlue.withOpacity(0.9)),
+                const SizedBox(width: 6),
+                Text('${forecast.humidity}%',
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.white70)),
+                const SizedBox(width: 12),
+                Icon(Icons.air, size: 14, color: Colors.white70),
+                const SizedBox(width: 6),
+                Text('${forecast.windSpeed.toStringAsFixed(0)}',
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.white70)),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _maybeCenterTodayOnPage(int pageIndex) {
+    final week = _cachedWeeks[pageIndex];
+    if (week == null || week.isEmpty) return;
+
+    final today = DateTime.now();
+    final todayKey = _formatDdMm(today);
+
+    final todayIndex = week.indexWhere((d) => d.date == todayKey);
+    if (todayIndex == -1) return;
+
+    final controller =
+        _innerControllers.putIfAbsent(pageIndex, () => ScrollController());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!controller.hasClients) return;
+      final box = context.findRenderObject() as RenderBox?;
+      final parentWidth = box?.size.width ?? MediaQuery.of(context).size.width;
+      double itemWidth = 110.0; // Fixed width for centering logic
+
+      final double itemFullWidth = itemWidth + 14.0;
+      final targetOffset = (todayIndex * itemFullWidth) -
+          (parentWidth / 2) +
+          (itemWidth / 2) +
+          7;
+      final clampedOffset =
+          targetOffset.clamp(0.0, controller.position.maxScrollExtent);
+      controller.animateTo(
+        clampedOffset,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  Widget _buildWeekPage(BuildContext context, int pageIndex) {
+    final week = _cachedWeeks[pageIndex];
+
+    return LayoutBuilder(builder: (context, constraints) {
+      double itemWidth = 110.0; // Fixed width for every card
+
+      final controller =
+          _innerControllers.putIfAbsent(pageIndex, () => ScrollController());
+
+      if (week == null) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(height: 8),
+              Text('Loading week...', style: TextStyle(color: Colors.white70)),
+            ],
+          ),
+        );
+      }
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: SizedBox(
+          height: constraints.maxHeight,
+          child: ListView.builder(
+            controller: controller,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: week.length,
+            shrinkWrap: true,
+            itemBuilder: (context, idx) {
+              final forecast = week[idx];
+              return _buildDetailedForecastItem(forecast, itemWidth);
+            },
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildSectionHeader(String title, IconData icon) {
@@ -241,45 +408,36 @@ class _BottomSectionState extends State<BottomSection> {
     );
   }
 
-  bool _isPast(DailyForecast forecast) {
-    final now = DateTime.now();
-    try {
-      final parts = forecast.date.split('-');
-      final forecastDate = DateTime(now.year, int.parse(parts[1]), int.parse(parts[0]));
-      return forecastDate.isBefore(DateTime(now.year, now.month, now.day));
-    } catch (_) {
-      return false;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('Weekly Weather', Icons.calendar_today),
+        _buildSectionHeader('Weekly Forecast', Icons.calendar_today),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Center(
+            child: Text(
+              'Swipe left/right to move by week · Scroll inside week for day-level navigation',
+              style: TextStyle(
+                  color: Colors.white.withOpacity(0.75),
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic),
+            ),
+          ),
+        ),
         SizedBox(
-          height: 160,
+          height: 280,
           child: PageView.builder(
             controller: _pageController,
-            itemCount: 200,
-            itemBuilder: (context, index) {
-              final forecasts = _cachedWeeks[index];
-              if (forecasts == null) {
-                return const Center(child: CircularProgressIndicator());
+            onPageChanged: _onPageChanged,
+            itemCount: 301,
+            itemBuilder: (context, pageIndex) {
+              if (!_cachedWeeks.containsKey(pageIndex) &&
+                  !_loadingPages.contains(pageIndex)) {
+                _fetchWeek(pageIndex);
               }
-              if (forecasts.isEmpty) {
-                return const Center(
-                  child: Text('No data for this week.', style: TextStyle(color: Colors.white70)),
-                );
-              }
-              return Row(
-                children: forecasts.map((forecast) {
-                  return _buildDetailedForecastItem(
-                      forecast,
-                      _isPast(forecast));
-                }).toList(),
-              );
+              return _buildWeekPage(context, pageIndex);
             },
           ),
         ),

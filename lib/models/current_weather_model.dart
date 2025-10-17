@@ -66,8 +66,21 @@ class CurrentWeather {
     }
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'cityName': cityName,
+      'temperature': temperature,
+      'humidity': humidity,
+      'windSpeed': windSpeed,
+      'description': description,
+      'mainCondition': mainCondition,
+      'icon': icon,
+      'day': day,
+      'date': date,
+    };
+  }
+
   static String _mapVirtualCrossingIcon(String virtualCrossingIcon) {
-    // Map VirtualCrossing icons to weather icon codes
     const iconMap = {
       'clear-day': '01d',
       'clear-night': '01n',
