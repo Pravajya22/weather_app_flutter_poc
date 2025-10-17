@@ -1,111 +1,214 @@
 import 'dart:convert';
+import 'dart:async';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/current_weather_model.dart';
 import '../models/forecast_model.dart';
 import '../core/api_constants.dart';
+import '../services/rate_limiter.dart';
+import '../services/api_usage_tracker.dart';
 
 class WeatherApiService {
+  static final CacheManager cacheManager = DefaultCacheManager();
+  static final RateLimiter _rateLimiter = RateLimiter(const Duration(seconds: 2));
+
   Future<CurrentWeather?> fetchCurrentWeather(String city) async {
     try {
-      final apiKey = dotenv.env['VIRTUALCROSSING_API_KEY'];
-      final baseUrl = dotenv.env['VIRTUALCROSSING_BASE_URL'];
-
-      if (apiKey == null || apiKey.isEmpty) {
-        throw Exception("API key is missing. Check your .env file.");
+      // Check rate limiting
+      if (!_rateLimiter.canCall('current_$city')) {
+        print('⏳ Rate limited: Skipping API call for $city');
+        return await _getCachedCurrentWeather(city);
       }
-      if (baseUrl == null || baseUrl.isEmpty) {
-        throw Exception("Base URL is missing. Check your .env file.");
+
+      final apiKey = ApiConstants.apiKey;
+      final baseUrl = ApiConstants.baseUrl;
+
+      if (apiKey.isEmpty || baseUrl.isEmpty) {
+        throw Exception("Missing API key or Base URL.");
       }
 
       final encodedCity = Uri.encodeComponent(city.trim());
       final url = Uri.parse(
-        '${baseUrl}${encodedCity}/today?unitGroup=metric&key=$apiKey',
+        '$baseUrl/$encodedCity/today?unitGroup=metric&key=$apiKey',
       );
 
-      print("📡 Requesting URL: $url");
+      print("📡 Requesting Current Weather: $url");
 
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final weather = CurrentWeather.fromJson(data);
-        return weather;
+        
+        // Cache the response
+        await _cacheResponse('current_$city', response.body, const Duration(minutes: 30));
+        
+        // Track usage
+        ApiUsageTracker.recordCall('current_weather');
+        _rateLimiter.recordCall('current_$city');
+        
+        return CurrentWeather.fromJson(data);
+      } else if (response.statusCode == 429) {
+        print('❌ Rate limit exceeded for current weather');
+        throw Exception('Daily API limit reached. Using cached data if available.');
       } else {
-        final errorData = jsonDecode(response.body);
-        final message = errorData['message'] ?? 'Unknown API error';
-        print("❌ API Error: $message");
-        return null;
+        print("❌ API Error: ${response.statusCode} - ${response.body}");
+        return await _getCachedCurrentWeather(city);
       }
     } catch (e) {
       print("⚠️ Exception in fetchCurrentWeather: $e");
-      return null;
+      return await _getCachedCurrentWeather(city);
     }
   }
 
-  Future<List<DailyForecast>?> fetchForecast(String city) async {
+  Future<List<DailyForecast>> getForecastForDateRange(
+    String city,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     try {
-      final apiKey = dotenv.env['VIRTUALCROSSING_API_KEY'];
-      final baseUrl = dotenv.env['VIRTUALCROSSING_BASE_URL'];
-
-      if (apiKey == null || apiKey.isEmpty) {
-        throw Exception("API key is missing. Check your .env file.");
+      final cacheKey = 'forecast_${city}_${_formatDate(startDate)}_${_formatDate(endDate)}';
+      
+      // Check rate limiting
+      if (!_rateLimiter.canCall(cacheKey)) {
+        print('⏳ Rate limited: Skipping forecast API call');
+        return await _getCachedForecast(cacheKey);
       }
-      if (baseUrl == null || baseUrl.isEmpty) {
-        throw Exception("Base URL is missing. Check your .env file.");
+
+      final apiKey = ApiConstants.apiKey;
+      final baseUrl = ApiConstants.baseUrl;
+
+      if (apiKey.isEmpty || baseUrl.isEmpty) {
+        throw Exception("Missing API credentials.");
       }
 
       final encodedCity = Uri.encodeComponent(city.trim());
-      final forecastUrl = Uri.parse(
-        '${baseUrl}${encodedCity}?unitGroup=metric&key=$apiKey',
+      final startDateStr = _formatDate(startDate);
+      final endDateStr = _formatDate(endDate);
+
+      final url = Uri.parse(
+        '$baseUrl/$encodedCity/$startDateStr/$endDateStr?unitGroup=metric&key=$apiKey',
       );
 
-      print("📡 Requesting forecast URL: $forecastUrl");
+      print("📡 Requesting Forecast: $url");
 
-      final response = await http.get(forecastUrl);
+      final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<DailyForecast> forecasts = [];
         final days = data['days'] as List<dynamic>? ?? [];
+        
+        // Cache the response
+        await _cacheResponse(cacheKey, response.body, const Duration(hours: 2));
+        
+        // Track usage
+        ApiUsageTracker.recordCall('forecast');
+        _rateLimiter.recordCall(cacheKey);
+        
+        return days.map((dayData) {
+          final DateTime dateTime = DateTime.parse(dayData['datetime']);
 
-        for (int i = 0; i < days.length && i < 7; i++) {
-          final dayData = days[i];
-          final dateTime = DateTime.parse(dayData['datetime']);
-
-          forecasts.add(
-            DailyForecast(
-              day: _getDayName(dateTime.weekday),
-              date:
-                  '${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}',
-              maxTemp: (dayData['tempmax'] as num).toDouble(),
-              minTemp: (dayData['tempmin'] as num).toDouble(),
-              temperature: (dayData['temp'] as num).toDouble(),
-              humidity: (dayData['humidity'] as num).round(),
-              windSpeed: (dayData['windspeed'] as num).toDouble(),
-              description: _capitalizeDescription(
-                dayData['description'] as String? ?? 'No description',
-              ),
-              mainCondition: dayData['icon'] as String? ?? 'Unknown',
-              icon: _mapVirtualCrossingIcon(
-                dayData['icon'] as String? ?? 'clear-day',
-              ),
-              feelsLike: (dayData['feelslike'] as num).toDouble(),
-              pressure: (dayData['pressure'] as num).toDouble(),
-              uvIndex: (dayData['uvindex'] as num).toDouble(),
+          return DailyForecast(
+            day: _getDayName(dateTime.weekday),
+            date: '${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}',
+            maxTemp: (dayData['tempmax'] as num?)?.toDouble() ?? 0.0,
+            minTemp: (dayData['tempmin'] as num?)?.toDouble() ?? 0.0,
+            temperature: (dayData['temp'] as num?)?.toDouble() ?? 0.0,
+            humidity: (dayData['humidity'] as num?)?.round() ?? 0,
+            windSpeed: (dayData['windspeed'] as num?)?.toDouble() ?? 0.0,
+            description: _capitalizeDescription(
+              (dayData['conditions'] as String?) ?? 'No description',
             ),
+            mainCondition: (dayData['icon'] as String?) ?? 'Unknown',
+            icon: _mapVirtualCrossingIcon(
+              dayData['icon'] as String? ?? 'clear-day',
+            ),
+            feelsLike: (dayData['feelslike'] as num?)?.toDouble() ?? 0.0,
+            pressure: (dayData['pressure'] as num?)?.toDouble() ?? 0.0,
+            uvIndex: (dayData['uvindex'] as num?)?.toDouble() ?? 0.0,
           );
-        }
-
-        return forecasts;
+        }).toList();
+      } else if (response.statusCode == 429) {
+        print('❌ Rate limit exceeded for forecast');
+        return await _getCachedForecast(cacheKey);
       } else {
-        print("❌ Forecast API error");
-        return null;
+        print("❌ Forecast API Error: ${response.statusCode} - ${response.body}");
+        return await _getCachedForecast(cacheKey);
       }
     } catch (e) {
-      print("⚠️ Exception in fetchForecast: $e");
-      return null;
+      print("⚠️ Error in getForecastForDateRange: $e");
+      return [];
     }
+  }
+
+  Future<void> _cacheResponse(String key, String response, Duration maxAge) async {
+    try {
+      await cacheManager.putFile(
+        key,
+        utf8.encode(response),
+        maxAge: maxAge,
+        fileExtension: 'json',
+      );
+      print('💾 Cached response for: $key');
+    } catch (e) {
+      print('⚠️ Error caching response: $e');
+    }
+  }
+
+  Future<CurrentWeather?> _getCachedCurrentWeather(String city) async {
+    try {
+      final cacheKey = 'current_$city';
+      final fileInfo = await cacheManager.getFileFromCache(cacheKey);
+      
+      if (fileInfo != null && fileInfo.validTill.isAfter(DateTime.now())) {
+        print('📦 Using cached current weather for: $city');
+        final cachedData = await fileInfo.file.readAsString();
+        return CurrentWeather.fromJson(jsonDecode(cachedData));
+      }
+    } catch (e) {
+      print('⚠️ Error reading cached current weather: $e');
+    }
+    return null;
+  }
+
+  Future<List<DailyForecast>> _getCachedForecast(String cacheKey) async {
+    try {
+      final fileInfo = await cacheManager.getFileFromCache(cacheKey);
+      
+      if (fileInfo != null && fileInfo.validTill.isAfter(DateTime.now())) {
+        print('📦 Using cached forecast data for: $cacheKey');
+        final cachedData = await fileInfo.file.readAsString();
+        final data = jsonDecode(cachedData);
+        final days = data['days'] as List<dynamic>? ?? [];
+        
+        return days.map((dayData) {
+          final DateTime dateTime = DateTime.parse(dayData['datetime']);
+          
+          return DailyForecast(
+            day: _getDayName(dateTime.weekday),
+            date: '${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}',
+            maxTemp: (dayData['tempmax'] as num?)?.toDouble() ?? 0.0,
+            minTemp: (dayData['tempmin'] as num?)?.toDouble() ?? 0.0,
+            temperature: (dayData['temp'] as num?)?.toDouble() ?? 0.0,
+            humidity: (dayData['humidity'] as num?)?.round() ?? 0,
+            windSpeed: (dayData['windspeed'] as num?)?.toDouble() ?? 0.0,
+            description: _capitalizeDescription(
+              (dayData['conditions'] as String?) ?? 'No description',
+            ),
+            mainCondition: (dayData['icon'] as String?) ?? 'Unknown',
+            icon: _mapVirtualCrossingIcon(
+              dayData['icon'] as String? ?? 'clear-day',
+            ),
+            feelsLike: (dayData['feelslike'] as num?)?.toDouble() ?? 0.0,
+            pressure: (dayData['pressure'] as num?)?.toDouble() ?? 0.0,
+            uvIndex: (dayData['uvindex'] as num?)?.toDouble() ?? 0.0,
+          );
+        }).toList();
+      }
+    } catch (e) {
+      print('⚠️ Error reading cached forecast: $e');
+    }
+    return [];
   }
 
   static String _getDayName(int weekday) {
@@ -123,7 +226,7 @@ class WeatherApiService {
         .join(' ');
   }
 
-  static String _mapVirtualCrossingIcon(String virtualCrossingIcon) {
+  static String _mapVirtualCrossingIcon(String icon) {
     const iconMap = {
       'clear-day': '01d',
       'clear-night': '01n',
@@ -145,102 +248,10 @@ class WeatherApiService {
       'hail': '13d',
       'sleet': '13d',
     };
-
-    return iconMap[virtualCrossingIcon] ?? '01d';
+    return iconMap[icon] ?? '01d';
   }
 
-  // ✅ Corrected: Get 3 past (excluding today) and 3 future days
-  Future<Map<String, List<DailyForecast>>> getExtendedForecast(
-    String city,
-  ) async {
-    try {
-      final apiKey = ApiConstants.apiKey;
-      final baseUrl = ApiConstants.baseUrl;
-
-      if (apiKey == null || baseUrl == null) {
-        throw Exception("Missing API credentials.");
-      }
-
-      final encodedCity = Uri.encodeComponent(city.trim());
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-
-      final startDate = today.subtract(const Duration(days: 3));
-      final endDate = today.add(const Duration(days: 3));
-
-      final dateFormat =
-          '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
-      final endDateFormat =
-          '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
-
-      final historicalUrl = Uri.parse(
-        '${baseUrl}${encodedCity}/$dateFormat/$endDateFormat?unitGroup=metric&key=$apiKey',
-      );
-
-      final response = await http.get(historicalUrl);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final days = data['days'] as List<dynamic>? ?? [];
-
-        final past = <DailyForecast>[];
-        final future = <DailyForecast>[];
-
-        for (final dayData in days) {
-          final dateTime = DateTime.parse(dayData['datetime']);
-          if (dateTime.isAtSameMomentAs(today)) continue; // Exclude today
-
-          final forecast = DailyForecast(
-            day: _getDayName(dateTime.weekday),
-            date:
-                '${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}',
-            maxTemp: (dayData['tempmax'] as num).toDouble(),
-            minTemp: (dayData['tempmin'] as num).toDouble(),
-            temperature: (dayData['temp'] as num).toDouble(),
-            humidity: (dayData['humidity'] as num).round(),
-            windSpeed: (dayData['windspeed'] as num).toDouble(),
-            description: _capitalizeDescription(
-              dayData['description'] as String? ?? 'No description',
-            ),
-            mainCondition: dayData['icon'] as String? ?? 'Unknown',
-            icon: _mapVirtualCrossingIcon(
-              dayData['icon'] as String? ?? 'clear-day',
-            ),
-            feelsLike: (dayData['feelslike'] as num).toDouble(),
-            pressure: (dayData['pressure'] as num).toDouble(),
-            uvIndex: (dayData['uvindex'] as num).toDouble(),
-          );
-
-          if (dateTime.isBefore(today)) {
-            past.add(forecast);
-          } else {
-            future.add(forecast);
-          }
-        }
-
-        past.sort((a, b) => _parseDate(b.date).compareTo(_parseDate(a.date)));
-        future.sort((a, b) => _parseDate(a.date).compareTo(_parseDate(b.date)));
-
-        return {
-          'past': past.take(3).toList(),
-          'future': future.take(3).toList(),
-        };
-      } else {
-        print("❌ Historical API Error");
-        return {'past': [], 'future': []};
-      }
-    } catch (e) {
-      print("⚠️ Error in getExtendedForecast: $e");
-      return {'past': [], 'future': []};
-    }
-  }
-
-  DateTime _parseDate(String dateStr) {
-    final parts = dateStr.split('-');
-    return DateTime(
-      DateTime.now().year,
-      int.parse(parts[1]),
-      int.parse(parts[0]),
-    );
+  static String _formatDate(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }
